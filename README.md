@@ -11,10 +11,7 @@ Starter examination system with Admin and Student panels, 45-minute Round 1 (Eng
 6. Open `http://localhost:3000`.
 
 ## Admin
-- Email: `alwardas@edu.com`
-- Password: `admin@1234`
-
-Change these before real deployment.
+Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in your environment before deployment. Do not keep a default admin password in the repo or in source control.
 
 ## Student data
 `data/students.csv` is a development snapshot of the registration responses you uploaded. For live registration, use the Google Apps Script bridge below.

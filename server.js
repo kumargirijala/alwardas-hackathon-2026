@@ -1,5 +1,7 @@
 const express = require('express');
 const session = require('express-session');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
@@ -9,18 +11,40 @@ const { parse } = require('csv-parse/sync');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-const PORT = process.env.PORT || 3000;
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'alwardas@edu.com';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin@1234';
-const SESSION_SECRET = process.env.SESSION_SECRET || 'change-this-secret';
+const PORT = Number(process.env.PORT) || 3000;
+const isProduction = process.env.NODE_ENV === 'production';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const SESSION_SECRET = process.env.SESSION_SECRET;
 const GOOGLE_URL = process.env.GOOGLE_SHEETS_WEB_APP_URL || '';
 const GOOGLE_TOKEN = process.env.GOOGLE_SHEETS_TOKEN || '';
 const STUDENT_REFRESH_MS = 60 * 1000;
+
+if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !SESSION_SECRET) {
+  console.error('Security error: set ADMIN_EMAIL, ADMIN_PASSWORD, and SESSION_SECRET in your environment before starting the app.');
+  process.exit(1);
+}
+
 let students = loadStudents();
 
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
-app.use(session({ secret: SESSION_SECRET, resave: false, saveUninitialized: false, cookie: { httpOnly: true, sameSite: 'lax', secure: false, maxAge: 8 * 60 * 60 * 1000 } }));
+app.use(session({
+  name: 'hackathon.sid',
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProduction,
+    maxAge: 8 * 60 * 60 * 1000
+  }
+}));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const examState = new Map();
